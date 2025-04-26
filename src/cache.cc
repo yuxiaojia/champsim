@@ -318,7 +318,7 @@ void CACHE::handle_writeback()
 
                 // check mshr
                 uint8_t miss_handled = 1;
-                int mshr_index = check_mshr(&WQ.entry[index]);
+                int mshr_index = check_mshr(&WQ.entry[index], cache_type);
 
                 if ((mshr_index == -1) && (MSHR.occupancy < MSHR_SIZE)) { // this is a new miss
 
@@ -608,14 +608,14 @@ void CACHE::handle_read()
 
                 // check mshr
                 uint8_t miss_handled = 1;
-                int mshr_index = check_mshr(&RQ.entry[index]);
+                int mshr_index = check_mshr(&RQ.entry[index], cache_type);
 
                 if ((mshr_index == -1) && (MSHR.occupancy < MSHR_SIZE)) { // this is a new miss
 
 		  if(cache_type == IS_LLC)
 		    {
 		      // check to make sure the DRAM RQ has room for this LLC read miss
-		      if (lower_level->get_occupancy(1, RQ.entry[index].address) == lower_level->get_size(1, RQ.entry[index].address))
+		    if (lower_level->get_occupancy(1, RQ.entry[index].address) == lower_level->get_size(1, RQ.entry[index].address))
 			{
 			  miss_handled = 0;
 			}
@@ -853,7 +853,7 @@ void CACHE::handle_prefetch()
 
                 // check mshr
                 uint8_t miss_handled = 1;
-                int mshr_index = check_mshr(&PQ.entry[index]);
+                int mshr_index = check_mshr(&PQ.entry[index], cache_type);
 
                 if ((mshr_index == -1) && (MSHR.occupancy < MSHR_SIZE)) { // this is a new miss
 
@@ -1447,7 +1447,7 @@ int CACHE::add_pq(PACKET *packet)
 void CACHE::return_data(PACKET *packet)
 {
     // check MSHR information
-    int mshr_index = check_mshr(packet);
+    int mshr_index = check_mshr(packet, cache_type);
 
     // sanity check
     if (mshr_index == -1) {
@@ -1512,12 +1512,15 @@ void CACHE::update_fill_cycle()
     }
 }
 
-int CACHE::check_mshr(PACKET *packet)
+int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
 {
     // search mshr
     for (uint32_t index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == packet->address && MSHR.entry[index].cpu == packet->cpu) {
-            
+            if(cache_type == IS_LLC)
+            {
+                llc_mshr_merging++;
+            }
             DP ( if (warmup_complete[packet->cpu]) {
             cout << "[" << NAME << "_MSHR] " << __func__ << " same entry instr_id: " << packet->instr_id << " prior_id: " << MSHR.entry[index].instr_id;
             cout << " address: " << hex << packet->address;

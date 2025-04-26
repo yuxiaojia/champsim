@@ -115,6 +115,7 @@ class CACHE : public MEMORY {
              roi_miss[NUM_CPUS][NUM_TYPES];
 
     uint64_t total_miss_latency;
+    uint64_t llc_mshr_merging;
     
     // constructor
     CACHE(string v1, uint32_t v2, int v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) 
@@ -183,7 +184,7 @@ class CACHE : public MEMORY {
 
     int  check_hit(PACKET *packet),
          invalidate_entry(uint64_t inval_addr),
-         check_mshr(PACKET *packet),
+         check_mshr(PACKET *packet, uint8_t cache_type),
          prefetch_line(uint64_t ip, uint64_t base_addr, uint64_t pf_addr, int prefetch_fill_level, uint32_t prefetch_metadata),
          kpc_prefetch_line(uint64_t base_addr, uint64_t pf_addr, int prefetch_fill_level, int delta, int depth, int signature, int confidence, uint32_t prefetch_metadata);
 
