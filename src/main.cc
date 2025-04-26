@@ -96,6 +96,10 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
         << "Core_" << cpu << "_" << cache->NAME << "_writeback_hit " << cache->sim_hit[cpu][3] << endl
         << "Core_" << cpu << "_" << cache->NAME << "_writeback_miss " << cache->sim_miss[cpu][3] << endl
         << endl;
+
+    if(cache->NAME == "LLC"){
+        cout<<"LLC mshr merging " << cache->llc_mshr_merging << endl;
+    }
 }
 
 void print_branch_stats(uint32_t cpu)
