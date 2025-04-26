@@ -2,6 +2,7 @@
 #define CACHE_H
 
 #include "memory_class.h"
+#include <vector>
 
 // PAGE
 extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
@@ -116,6 +117,8 @@ class CACHE : public MEMORY {
 
     uint64_t total_miss_latency;
     uint64_t llc_mshr_merging;
+
+    std::vector<std::vector<int>> time_mshr_table;
     
     // constructor
     CACHE(string v1, uint32_t v2, int v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) 
@@ -161,6 +164,9 @@ class CACHE : public MEMORY {
         pf_useless = 0;
         pf_late = 0;
         pf_fill = 0;
+
+        time_mshr_table.resize(LLC_MSHR_SIZE, std::vector<int>(NUM_CPUS, 0));
+
     };
 
     // destructor

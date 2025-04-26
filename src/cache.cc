@@ -246,6 +246,7 @@ void CACHE::handle_fill()
 	      }
 	  
             MSHR.remove_queue(&MSHR.entry[mshr_index]);
+            std::fill(time_mshr_table[mshr_index].begin(), time_mshr_table[mshr_index].end(), 0);
             MSHR.num_returned--;
 
             update_fill_cycle();
@@ -1517,6 +1518,11 @@ int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
     // search mshr
     for (uint32_t index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == packet->address) {
+            if(time_mshr_table[index][packet->cpu] == 0){
+                // Force this to be a miss if it is first miss
+                time_mshr_table[index][packet->cpu] = 1;
+                return -1;
+            }
             if(cache_type == IS_LLC)
             {
                 llc_mshr_merging++;
@@ -1555,6 +1561,7 @@ void CACHE::add_mshr(PACKET *packet)
     for (index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == 0) {
             
+            time_mshr_table[index][packet->cpu] = 1;
             MSHR.entry[index] = *packet;
             MSHR.entry[index].returned = INFLIGHT;
             MSHR.occupancy++;
