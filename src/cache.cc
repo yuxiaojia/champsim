@@ -246,7 +246,9 @@ void CACHE::handle_fill()
 	      }
 	  
             MSHR.remove_queue(&MSHR.entry[mshr_index]);
-            std::fill(time_mshr_table[mshr_index].begin(), time_mshr_table[mshr_index].end(), 0);
+            if (cache_type == IS_LLC) {
+                std::fill(time_mshr_table[mshr_index].begin(), time_mshr_table[mshr_index].end(), 0);
+            }
             MSHR.num_returned--;
 
             update_fill_cycle();
@@ -332,14 +334,14 @@ void CACHE::handle_writeback()
 			}
 		      else
 			{
-			  add_mshr(&WQ.entry[index]);
+			  add_mshr(&WQ.entry[index], cache_type);
 			  lower_level->add_rq(&WQ.entry[index]);
 			}
 		    }
 		  else
 		    {
 		      // add it to mshr (RFO miss)
-		      add_mshr(&WQ.entry[index]);
+		      add_mshr(&WQ.entry[index], cache_type);
 		      
 		      // add it to the next level's read queue
 		      //if (lower_level) // L1D always has a lower level cache
@@ -622,7 +624,7 @@ void CACHE::handle_read()
 			}
 		      else
 			{
-			  add_mshr(&RQ.entry[index]);
+			  add_mshr(&RQ.entry[index], cache_type);
 			  if(lower_level)
 			    {
 			      lower_level->add_rq(&RQ.entry[index]);
@@ -632,7 +634,7 @@ void CACHE::handle_read()
 		  else
 		    {
 		      // add it to mshr (read miss)
-		      add_mshr(&RQ.entry[index]);
+		      add_mshr(&RQ.entry[index], cache_type);
 		      
 		      // add it to the next level's read queue
 		      if (lower_level)
@@ -884,7 +886,7 @@ void CACHE::handle_prefetch()
 			  
 			  // add it to MSHRs if this prefetch miss will be filled to this cache level
 			  if (PQ.entry[index].fill_level <= fill_level)
-			    add_mshr(&PQ.entry[index]);
+			    add_mshr(&PQ.entry[index], cache_type);
 
 			  lower_level->add_rq(&PQ.entry[index]); // add it to the DRAM RQ
 			}
@@ -905,7 +907,7 @@ void CACHE::handle_prefetch()
 			  
 			  // add it to MSHRs if this prefetch miss will be filled to this cache level
 			  if (PQ.entry[index].fill_level <= fill_level)
-			    add_mshr(&PQ.entry[index]);
+			    add_mshr(&PQ.entry[index], cache_type);
 
 			  lower_level->add_pq(&PQ.entry[index]); // add it to the DRAM RQ
 			}
@@ -1518,10 +1520,13 @@ int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
     // search mshr
     for (uint32_t index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == packet->address) {
-            if(time_mshr_table[index][packet->cpu] == 0){
-                // Force this to be a miss if it is first miss
-                time_mshr_table[index][packet->cpu] = 1;
-                return -1;
+            if(cache_type == IS_LLC)
+            {
+                if(time_mshr_table[index][packet->cpu] == 0){
+                    // Force this to be a miss if it is first miss
+                    time_mshr_table[index][packet->cpu] = 1;
+                    return -1;
+                }
             }
             if(cache_type == IS_LLC)
             {
@@ -1551,7 +1556,7 @@ int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
     return -1;
 }
 
-void CACHE::add_mshr(PACKET *packet)
+void CACHE::add_mshr(PACKET *packet, uint8_t cache_type)
 {
     uint32_t index = 0;
 
@@ -1561,7 +1566,9 @@ void CACHE::add_mshr(PACKET *packet)
     for (index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == 0) {
             
-            time_mshr_table[index][packet->cpu] = 1;
+            if (cache_type == IS_LLC) {
+                time_mshr_table[index][packet->cpu] = 1;
+            }
             MSHR.entry[index] = *packet;
             MSHR.entry[index].returned = INFLIGHT;
             MSHR.occupancy++;
