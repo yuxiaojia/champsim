@@ -639,6 +639,7 @@ int main(int argc, char** argv)
 
             count_traces++;
             if (count_traces > NUM_CPUS) {
+                printf("count_traces%d, NUM_CPUS%d",count_traces,NUM_CPUS );
                 printf("\n*** Too many traces for the configured number of cores ***\n\n");
                 assert(0);
             }

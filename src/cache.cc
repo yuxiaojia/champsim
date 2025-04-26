@@ -1516,7 +1516,7 @@ int CACHE::check_mshr(PACKET *packet)
 {
     // search mshr
     for (uint32_t index=0; index<MSHR_SIZE; index++) {
-        if (MSHR.entry[index].address == packet->address) {
+        if (MSHR.entry[index].address == packet->address && MSHR.entry[index].cpu == packet->cpu) {
             
             DP ( if (warmup_complete[packet->cpu]) {
             cout << "[" << NAME << "_MSHR] " << __func__ << " same entry instr_id: " << packet->instr_id << " prior_id: " << MSHR.entry[index].instr_id;
@@ -1553,6 +1553,7 @@ void CACHE::add_mshr(PACKET *packet)
             
             MSHR.entry[index] = *packet;
             MSHR.entry[index].returned = INFLIGHT;
+            MSHR.entry[index].cpu = packet->cpu;
             MSHR.occupancy++;
 
             DP ( if (warmup_complete[packet->cpu]) {
