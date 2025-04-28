@@ -1,0 +1,4 @@
+obj/
+bin/
+traces/
+results_4core_*/
