@@ -60,5 +60,5 @@ if [ ! -f "$TRACE_DIR/$TRACE3" ] ; then
     exit 1
 fi
 
-mkdir -p results_4core_${N_SIM}M
-(./bin/${BINARY} -warmup_instructions ${N_WARM}000000 -simulation_instructions ${N_SIM}000000 ${OPTION} -traces ${TRACE_DIR}/${TRACE0} ${TRACE_DIR}/${TRACE1} ${TRACE_DIR}/${TRACE2} ${TRACE_DIR}/${TRACE3}) &> results_4core_${N_SIM}M/mix${N_MIX}-${BINARY}${OPTION}.txt
+mkdir -p out2${N_SIM}M
+(./bin/${BINARY} -warmup_instructions ${N_WARM}000000 -simulation_instructions ${N_SIM}000000 ${OPTION} -traces ${TRACE_DIR}/${TRACE0} ${TRACE_DIR}/${TRACE1} ${TRACE_DIR}/${TRACE2} ${TRACE_DIR}/${TRACE3}) &> out2${N_SIM}M/mix${N_MIX}-${BINARY}${OPTION}${TRACE0}.txt
