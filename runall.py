@@ -2,7 +2,7 @@ import os
 import subprocess
 
 trace_dir = 'traces'
-command_template = './run_4core.sh perceptron-no-no-no-ship-4core 1 10 0 {0} {0} {0} {0}'
+command_template = './run_4core.sh perceptron-no-no-no-lru-4core 1 10 0 {0} {0} {0} {0}'
 
 if os.path.exists(trace_dir) and os.path.isdir(trace_dir):
     trace_files = [f for f in os.listdir(trace_dir) if os.path.isfile(os.path.join(trace_dir, f))]
