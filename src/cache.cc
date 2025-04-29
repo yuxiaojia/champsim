@@ -244,7 +244,13 @@ void CACHE::handle_fill()
 		uint64_t current_miss_latency = (current_core_cycle[fill_cpu] - MSHR.entry[mshr_index].cycle_enqueued);
 		total_miss_latency += current_miss_latency;
 	      }
-	  
+            if(cache_type == IS_LLC)
+            {
+                if(llc_mshr_max_full < MSHR.occupancy)
+                {
+                    llc_mshr_max_full = MSHR.occupancy;
+                }
+            }
             MSHR.remove_queue(&MSHR.entry[mshr_index]);
             MSHR.num_returned--;
 
@@ -1467,9 +1473,9 @@ void CACHE::return_data(PACKET *packet)
 
     // ADD LATENCY
     if (MSHR.entry[mshr_index].event_cycle < current_core_cycle[packet->cpu])
-        MSHR.entry[mshr_index].event_cycle = current_core_cycle[packet->cpu] + LATENCY;
+        MSHR.entry[mshr_index].event_cycle = current_core_cycle[packet->cpu] + MSHR_LATENCY;
     else
-        MSHR.entry[mshr_index].event_cycle += LATENCY;
+        MSHR.entry[mshr_index].event_cycle += MSHR_LATENCY;
 
     update_fill_cycle();
 
@@ -1515,10 +1521,20 @@ void CACHE::update_fill_cycle()
 int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
 {
     // search mshr
+    // printf("packet->cpu%u\n",packet->cpu);
+    // printf("packet->address%u\n",packet->address);
+    if(cache_type == IS_LLC)
+    {
+        if(MSHR_SIZE == MSHR.occupancy)
+        {
+            llc_mshr_full_stall = llc_mshr_full_stall + 1;
+        }
+    }
     for (uint32_t index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == packet->address) {
             if(cache_type == IS_LLC)
             {
+                // printf("llc_mshr_merging%u\n",llc_mshr_merging);
                 llc_mshr_merging++;
             }
             

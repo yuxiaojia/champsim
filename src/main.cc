@@ -99,6 +99,8 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
 
     if(cache->NAME == "LLC"){
         cout<<"LLC mshr merging " << cache->llc_mshr_merging << endl;
+        cout<<"llc_mshr_max_full " << cache->llc_mshr_max_full << endl;
+        cout<<"llc_mshr_full_stall " << cache->llc_mshr_full_stall << endl;
     }
 }
 
@@ -576,14 +578,14 @@ int main(int argc, char** argv)
         DRAM_MTPS = DRAM_IO_FREQ;
 
     // DRAM access latency
-    tRP  = (uint32_t)((1.0 * tRP_DRAM_NANOSECONDS  * CPU_FREQ) / 1000); 
-    tRCD = (uint32_t)((1.0 * tRCD_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
-    tCAS = (uint32_t)((1.0 * tCAS_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
+    tRP  = (uint32_t)((10.0 * tRP_DRAM_NANOSECONDS  * CPU_FREQ) / 1000); 
+    tRCD = (uint32_t)((10.0 * tRCD_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
+    tCAS = (uint32_t)((10.0 * tCAS_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
 
     // default: 16 = (64 / 8) * (3200 / 1600)
     // it takes 16 CPU cycles to tranfser 64B cache block on a 8B (64-bit) bus 
     // note that dram burst length = BLOCK_SIZE/DRAM_CHANNEL_WIDTH
-    DRAM_DBUS_RETURN_TIME = (BLOCK_SIZE / DRAM_CHANNEL_WIDTH) * (1.0 * CPU_FREQ / DRAM_MTPS);
+    DRAM_DBUS_RETURN_TIME = 100 * (BLOCK_SIZE / DRAM_CHANNEL_WIDTH) * (1.0 * CPU_FREQ / DRAM_MTPS);
 
     // end consequence of knobs
 

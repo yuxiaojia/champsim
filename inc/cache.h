@@ -21,7 +21,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define ITLB_RQ_SIZE 16
 #define ITLB_WQ_SIZE 16
 #define ITLB_PQ_SIZE 0
-#define ITLB_MSHR_SIZE 8
+#define ITLB_MSHR_SIZE 2
 #define ITLB_LATENCY 1
 
 // DATA TLB
@@ -30,7 +30,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define DTLB_RQ_SIZE 16
 #define DTLB_WQ_SIZE 16
 #define DTLB_PQ_SIZE 0
-#define DTLB_MSHR_SIZE 8
+#define DTLB_MSHR_SIZE 2
 #define DTLB_LATENCY 1
 
 // SECOND LEVEL TLB
@@ -39,7 +39,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define STLB_RQ_SIZE 32
 #define STLB_WQ_SIZE 32
 #define STLB_PQ_SIZE 0
-#define STLB_MSHR_SIZE 16
+#define STLB_MSHR_SIZE 2
 #define STLB_LATENCY 8
 
 // L1 INSTRUCTION CACHE
@@ -48,7 +48,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define L1I_RQ_SIZE 64
 #define L1I_WQ_SIZE 64 
 #define L1I_PQ_SIZE 8
-#define L1I_MSHR_SIZE 8
+#define L1I_MSHR_SIZE 2
 #define L1I_LATENCY 1
 
 // L1 DATA CACHE
@@ -57,7 +57,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define L1D_RQ_SIZE 64
 #define L1D_WQ_SIZE 64 
 #define L1D_PQ_SIZE 8
-#define L1D_MSHR_SIZE 16
+#define L1D_MSHR_SIZE 2
 #define L1D_LATENCY 4
 
 // L2 CACHE
@@ -66,7 +66,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define L2C_RQ_SIZE 32
 #define L2C_WQ_SIZE 32
 #define L2C_PQ_SIZE 16
-#define L2C_MSHR_SIZE 32
+#define L2C_MSHR_SIZE 4
 #define L2C_LATENCY 10  // 5 (L1I or L1D) + 10 = 14 cycles
 
 // LAST LEVEL CACHE
@@ -75,7 +75,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_RQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
 #define LLC_WQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
 #define LLC_PQ_SIZE NUM_CPUS*32
-#define LLC_MSHR_SIZE NUM_CPUS*64
+#define LLC_MSHR_SIZE NUM_CPUS*8
 #define LLC_LATENCY 20  // 5 (L1I or L1D) + 10 + 20 = 34 cycles
 
 void print_cache_config();
@@ -86,6 +86,7 @@ class CACHE : public MEMORY {
     const string NAME;
     const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE;
     uint32_t LATENCY;
+    uint32_t MSHR_LATENCY;
     BLOCK **block;
     int fill_level;
     uint32_t MAX_READ, MAX_FILL;
@@ -116,12 +117,19 @@ class CACHE : public MEMORY {
 
     uint64_t total_miss_latency;
     uint64_t llc_mshr_merging;
+    uint64_t llc_mshr_max_full;
+    uint64_t llc_mshr_full_stall;
+
     
     // constructor
     CACHE(string v1, uint32_t v2, int v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) 
         : NAME(v1), NUM_SET(v2), NUM_WAY(v3), NUM_LINE(v4), WQ_SIZE(v5), RQ_SIZE(v6), PQ_SIZE(v7), MSHR_SIZE(v8) {
 
         LATENCY = 0;
+        MSHR_LATENCY = 0;
+        if(cache_type == IS_LLC){
+            MSHR_LATENCY = 500;
+        }
 
         // cache block
         block = new BLOCK* [NUM_SET];
@@ -161,6 +169,10 @@ class CACHE : public MEMORY {
         pf_useless = 0;
         pf_late = 0;
         pf_fill = 0;
+
+        llc_mshr_merging = 0;
+        llc_mshr_max_full = 0;
+        llc_mshr_full_stall = 0;
     };
 
     // destructor
