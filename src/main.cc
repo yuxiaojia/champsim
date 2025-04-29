@@ -99,6 +99,8 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
 
     if(cache->NAME == "LLC"){
         cout<<"LLC mshr merging " << cache->llc_mshr_merging << endl;
+        cout<<"llc_mshr_max_full " << cache->llc_mshr_max_full << endl;
+        cout<<"llc_mshr_full_stall " << cache->llc_mshr_full_stall << endl;
     }
 }
 

@@ -2,7 +2,6 @@
 #define CACHE_H
 
 #include "memory_class.h"
-#include <vector>
 
 // PAGE
 extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
@@ -22,7 +21,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define ITLB_RQ_SIZE 16
 #define ITLB_WQ_SIZE 16
 #define ITLB_PQ_SIZE 0
-#define ITLB_MSHR_SIZE 8
+#define ITLB_MSHR_SIZE 4
 #define ITLB_LATENCY 1
 
 // DATA TLB
@@ -31,7 +30,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define DTLB_RQ_SIZE 16
 #define DTLB_WQ_SIZE 16
 #define DTLB_PQ_SIZE 0
-#define DTLB_MSHR_SIZE 8
+#define DTLB_MSHR_SIZE 4
 #define DTLB_LATENCY 1
 
 // SECOND LEVEL TLB
@@ -40,7 +39,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define STLB_RQ_SIZE 32
 #define STLB_WQ_SIZE 32
 #define STLB_PQ_SIZE 0
-#define STLB_MSHR_SIZE 16
+#define STLB_MSHR_SIZE 8
 #define STLB_LATENCY 8
 
 // L1 INSTRUCTION CACHE
@@ -49,7 +48,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define L1I_RQ_SIZE 64
 #define L1I_WQ_SIZE 64 
 #define L1I_PQ_SIZE 8
-#define L1I_MSHR_SIZE 8
+#define L1I_MSHR_SIZE 4
 #define L1I_LATENCY 1
 
 // L1 DATA CACHE
@@ -58,7 +57,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define L1D_RQ_SIZE 64
 #define L1D_WQ_SIZE 64 
 #define L1D_PQ_SIZE 8
-#define L1D_MSHR_SIZE 16
+#define L1D_MSHR_SIZE 8
 #define L1D_LATENCY 4
 
 // L2 CACHE
@@ -67,7 +66,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define L2C_RQ_SIZE 32
 #define L2C_WQ_SIZE 32
 #define L2C_PQ_SIZE 16
-#define L2C_MSHR_SIZE 32
+#define L2C_MSHR_SIZE 16
 #define L2C_LATENCY 10  // 5 (L1I or L1D) + 10 = 14 cycles
 
 // LAST LEVEL CACHE
@@ -76,7 +75,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_RQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
 #define LLC_WQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
 #define LLC_PQ_SIZE NUM_CPUS*32
-#define LLC_MSHR_SIZE NUM_CPUS*64
+#define LLC_MSHR_SIZE NUM_CPUS*16
 #define LLC_LATENCY 20  // 5 (L1I or L1D) + 10 + 20 = 34 cycles
 
 void print_cache_config();
@@ -117,6 +116,8 @@ class CACHE : public MEMORY {
 
     uint64_t total_miss_latency;
     uint64_t llc_mshr_merging;
+    uint64_t llc_mshr_max_full;
+    uint64_t llc_mshr_full_stall;
 
     std::vector<std::vector<int>> time_mshr_table;
     
@@ -164,6 +165,10 @@ class CACHE : public MEMORY {
         pf_useless = 0;
         pf_late = 0;
         pf_fill = 0;
+
+        llc_mshr_merging = 0;
+        llc_mshr_max_full = 0;
+        llc_mshr_full_stall = 0;
 
         time_mshr_table.resize(LLC_MSHR_SIZE, std::vector<int>(NUM_CPUS, 0));
 

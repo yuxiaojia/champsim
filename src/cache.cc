@@ -244,6 +244,14 @@ void CACHE::handle_fill()
 		uint64_t current_miss_latency = (current_core_cycle[fill_cpu] - MSHR.entry[mshr_index].cycle_enqueued);
 		total_miss_latency += current_miss_latency;
 	      }
+
+            if(cache_type == IS_LLC)
+            {
+                if(llc_mshr_max_full < MSHR.occupancy)
+                {
+                    llc_mshr_max_full = MSHR.occupancy;
+                }
+            }
 	  
             MSHR.remove_queue(&MSHR.entry[mshr_index]);
             if (cache_type == IS_LLC) {
@@ -1517,6 +1525,15 @@ void CACHE::update_fill_cycle()
 
 int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
 {
+    // printf("packet->cpu%u\n",packet->cpu);
+    // printf("packet->address%u\n",packet->address);
+    if(cache_type == IS_LLC)
+    {
+        if(MSHR_SIZE == MSHR.occupancy)
+        {
+            llc_mshr_full_stall = llc_mshr_full_stall + 1;
+        }
+    }
     // search mshr
     for (uint32_t index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == packet->address) {
