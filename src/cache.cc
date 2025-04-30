@@ -199,6 +199,19 @@ void CACHE::handle_fill()
 
             // COLLECT STATS
             sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
+            // bool found_different_cpu = false;
+            // if (cache_type == IS_LLC) {
+            //     for(int i = 0; i < llc_vector.size(); i++){
+            //         if (llc_vector[i].cpu != fill_cpu && llc_vector[i].address == MSHR.entry[MSHR.next_fill_index].address) {
+            //             whole_llc_mshr_hit_diff_cpu_id++;
+            //             found_different_cpu = true;
+            //             break;
+            //         }
+            //     }
+            //     if(found_different_cpu == false){
+            //         llc_vector.push_back(MSHR.entry[MSHR.next_fill_index]);
+            //     }
+            // }
             sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
 
             fill_cache(set, way, &MSHR.entry[mshr_index]);
@@ -284,6 +297,25 @@ void CACHE::handle_writeback()
                 update_replacement_state(writeback_cpu, set, way, block[set][way].full_addr, WQ.entry[index].ip, 0, WQ.entry[index].type, 1);
 
             // COLLECT STATS
+            if (cache_type == IS_LLC) {
+                if (block[set][way].cpu != writeback_cpu) {
+                    block[set][way].cpu = writeback_cpu;
+                    llc_mshr_hit_diff_cpu_id++;
+                }
+            }
+            // bool found_different_cpu = false;
+            // if (cache_type == IS_LLC) {
+            //     for(int i = 0; i < llc_vector.size(); i++){
+            //         if ((llc_vector[i].cpu != writeback_cpu) && (llc_vector[i].address == WQ.entry[WQ.head].address)) {
+            //             whole_llc_mshr_hit_diff_cpu_id++;
+            //             found_different_cpu = true;
+            //             break;
+            //         }
+            //     }
+            //     if(found_different_cpu == false){
+            //         llc_vector.push_back(WQ.entry[WQ.head]);
+            //     }
+            // }
             sim_hit[writeback_cpu][WQ.entry[index].type]++;
             sim_access[writeback_cpu][WQ.entry[index].type]++;
 
@@ -484,6 +516,19 @@ void CACHE::handle_writeback()
 
                     // COLLECT STATS
                     sim_miss[writeback_cpu][WQ.entry[index].type]++;
+                    // bool found_different_cpu = false;
+                    // if (cache_type == IS_LLC) {
+                    //     for(int i = 0; i < llc_vector.size(); i++){
+                    //         if (llc_vector[i].cpu != writeback_cpu && llc_vector[i].address == WQ.entry[WQ.head].address) {
+                    //             whole_llc_mshr_hit_diff_cpu_id++;
+                    //             found_different_cpu = true;
+                    //             break;
+                    //         }
+                    //     }
+                    //     if(found_different_cpu == false){
+                    //         llc_vector.push_back(WQ.entry[WQ.head]);
+                    //     }
+                    // }
                     sim_access[writeback_cpu][WQ.entry[index].type]++;
 
                     fill_cache(set, way, &WQ.entry[index]);
@@ -578,6 +623,25 @@ void CACHE::handle_read()
                     update_replacement_state(read_cpu, set, way, block[set][way].full_addr, RQ.entry[index].ip, 0, RQ.entry[index].type, 1);
 
                 // COLLECT STATS
+                if (cache_type == IS_LLC) {
+                    if (block[set][way].cpu != read_cpu) {
+                        block[set][way].cpu = read_cpu;
+                        llc_mshr_hit_diff_cpu_id++;
+                    }
+                }
+                // bool found_different_cpu = false;
+                // if (cache_type == IS_LLC) {
+                //     for(int i = 0; i < llc_vector.size(); i++){
+                //         if (llc_vector[i].cpu != read_cpu && llc_vector[i].address ==RQ.entry[RQ.head].address) {
+                //             whole_llc_mshr_hit_diff_cpu_id++;
+                //             found_different_cpu = true;
+                //             break;
+                //         }
+                //     }
+                //     if(found_different_cpu == false){
+                //         llc_vector.push_back(RQ.entry[RQ.head]);
+                //     }
+                // }
                 sim_hit[read_cpu][RQ.entry[index].type]++;
                 sim_access[read_cpu][RQ.entry[index].type]++;
 
@@ -815,6 +879,25 @@ void CACHE::handle_prefetch()
                     update_replacement_state(prefetch_cpu, set, way, block[set][way].full_addr, PQ.entry[index].ip, 0, PQ.entry[index].type, 1);
 
                 // COLLECT STATS
+                if (cache_type == IS_LLC) {
+                    if (block[set][way].cpu != prefetch_cpu) {
+                        block[set][way].cpu = prefetch_cpu;
+                        llc_mshr_hit_diff_cpu_id++;
+                    }
+                }
+                // bool found_different_cpu = false;
+                // if (cache_type == IS_LLC) {
+                //     for(int i = 0; i < llc_vector.size(); i++){
+                //         if (llc_vector[i].cpu != prefetch_cpu && llc_vector[i].address == PQ.entry[PQ.head].address) {
+                //             whole_llc_mshr_hit_diff_cpu_id++;
+                //             found_different_cpu = true;
+                //             break;
+                //         }
+                //     }
+                //     if(found_different_cpu == false){
+                //         llc_vector.push_back(PQ.entry[PQ.head]);
+                //     }
+                // }
                 sim_hit[prefetch_cpu][PQ.entry[index].type]++;
                 sim_access[prefetch_cpu][PQ.entry[index].type]++;
 

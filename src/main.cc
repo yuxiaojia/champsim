@@ -101,6 +101,9 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
         cout<<"LLC mshr merging " << cache->llc_mshr_merging << endl;
         cout<<"llc_mshr_max_full " << cache->llc_mshr_max_full << endl;
         cout<<"llc_mshr_full_stall " << cache->llc_mshr_full_stall << endl;
+        cout<<"llc_mshr_hit_diff_cpu_id; " << cache->llc_mshr_hit_diff_cpu_id << endl;
+        cout<<"whole_llc_mshr_hit_diff_cpu_id " << cache->whole_llc_mshr_hit_diff_cpu_id << endl;
+        cout<<"vector size " << cache->llc_vector.size() << endl;
     }
 }
 
@@ -578,14 +581,14 @@ int main(int argc, char** argv)
         DRAM_MTPS = DRAM_IO_FREQ;
 
     // DRAM access latency
-    tRP  = (uint32_t)((10.0 * tRP_DRAM_NANOSECONDS  * CPU_FREQ) / 1000); 
-    tRCD = (uint32_t)((10.0 * tRCD_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
-    tCAS = (uint32_t)((10.0 * tCAS_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
+    tRP  = (uint32_t)((1.0 * tRP_DRAM_NANOSECONDS  * CPU_FREQ) / 1000); 
+    tRCD = (uint32_t)((1.0 * tRCD_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
+    tCAS = (uint32_t)((1.0 * tCAS_DRAM_NANOSECONDS * CPU_FREQ) / 1000); 
 
     // default: 16 = (64 / 8) * (3200 / 1600)
     // it takes 16 CPU cycles to tranfser 64B cache block on a 8B (64-bit) bus 
     // note that dram burst length = BLOCK_SIZE/DRAM_CHANNEL_WIDTH
-    DRAM_DBUS_RETURN_TIME = 100 * (BLOCK_SIZE / DRAM_CHANNEL_WIDTH) * (1.0 * CPU_FREQ / DRAM_MTPS);
+    DRAM_DBUS_RETURN_TIME = 30.0 * (BLOCK_SIZE / DRAM_CHANNEL_WIDTH) * (1.0 * CPU_FREQ / DRAM_MTPS);
 
     // end consequence of knobs
 
@@ -884,7 +887,7 @@ int main(int argc, char** argv)
     elapsed_second -= (elapsed_hour*3600 + elapsed_minute*60);
     
     cout << endl << "ChampSim completed all CPUs" << endl;
-    if (NUM_CPUS > 1) {
+    if (NUM_CPUS >= 1) {
         cout << endl << "Total Simulation Statistics (not including warmup)" << endl;
         for (uint32_t i=0; i<NUM_CPUS; i++) {
             cout << endl << "CPU " << i << " cumulative IPC: " << (float) (ooo_cpu[i].num_retired - ooo_cpu[i].begin_sim_instr) / (current_core_cycle[i] - ooo_cpu[i].begin_sim_cycle); 

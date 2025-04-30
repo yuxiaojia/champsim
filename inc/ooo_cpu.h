@@ -35,6 +35,7 @@ void print_core_config();
 class O3_CPU {
   public:
     uint32_t cpu;
+    uint32_t count_print;
 
     // trace
     FILE *trace_file;
@@ -91,7 +92,7 @@ class O3_CPU {
     // constructor
     O3_CPU() {
         cpu = 0;
-
+        count_print = 0;
         // trace
         trace_file = NULL;
 

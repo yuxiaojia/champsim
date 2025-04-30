@@ -199,6 +199,12 @@ void O3_CPU::handle_branch()
 
                 arch_instr.instr_id = instr_unique_id;
                 arch_instr.ip = current_instr.ip;
+                // if(count_print < 10000){
+                //     printf("arch_instr.ip %llu\n", arch_instr.ip);
+                //     printf("cpu %llu\n", cpu);
+                //     count_print++;
+                // }
+    
                 arch_instr.is_branch = current_instr.is_branch;
                 arch_instr.branch_taken = current_instr.branch_taken;
 
@@ -430,6 +436,12 @@ void O3_CPU::fetch_instruction()
         trace_packet.fill_level = FILL_L1;
         trace_packet.cpu = cpu;
         trace_packet.address = ROB.entry[read_index].ip >> LOG2_PAGE_SIZE;
+        // if(count_print < 10000){
+        //     printf("ROB.entry[read_index].ip %llu\n", ROB.entry[read_index].ip);
+        //     printf("trace_packet.address %llu\n", trace_packet.address);
+        //     printf("cpu %llu\n", cpu);
+        //     count_print++;
+        // }
         if (knob_cloudsuite)
             trace_packet.address = ((ROB.entry[read_index].ip >> LOG2_PAGE_SIZE) << 9) | ( 256 + ROB.entry[read_index].asid[0]);
         else
