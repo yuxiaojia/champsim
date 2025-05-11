@@ -1,0 +1,7 @@
+./build_champsim.sh next_line                      
+
+./run_4core.sh perceptron-no-next_line-no-ship-4core 1 10 0 403.gcc-16B.champsimtrace.xz 403.gcc-16B.champsimtrace.xz 403.gcc-16B.champsimtrace.xz 403.gcc-16B.champsimtrace.xz
+
+./run_4core.sh perceptron-no-next_line-no-ship-4core 1 10 0 437.leslie3d-134B.champsimtrace.xz 437.leslie3d-134B.champsimtrace.xz 437.leslie3d-134B.champsimtrace.xz 437.leslie3d-134B.champsimtrace.xz
+
+traces can be download here https://dpc3.compas.cs.stonybrook.edu/champsim-traces/
