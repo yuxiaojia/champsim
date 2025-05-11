@@ -25,7 +25,7 @@ BRANCH=perceptron
 L1D_PREFETCHER=no
 LLC_PREFETCHER=no
 LLC_REPLACEMENT=lru
-NUM_CORE=2
+NUM_CORE=8
 #################################################
 
 # Sanity check

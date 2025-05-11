@@ -76,11 +76,6 @@ void CACHE::handle_fill()
 
     if (MSHR.next_fill_cycle <= current_core_cycle[fill_cpu]) {
 
-#ifdef SANITY_CHECK
-        if (MSHR.next_fill_index >= MSHR.SIZE)
-            assert(0);
-#endif
-
         uint32_t mshr_index = MSHR.next_fill_index;
 
         // find victim
@@ -90,45 +85,6 @@ void CACHE::handle_fill()
         }
         else
             way = find_victim(fill_cpu, MSHR.entry[mshr_index].instr_id, set, block[set], MSHR.entry[mshr_index].ip, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].type);
-
-#ifdef LLC_BYPASS
-        if ((cache_type == IS_LLC) && (way == LLC_WAY)) { // this is a bypass that does not fill the LLC
-
-            // update replacement policy
-            if (cache_type == IS_LLC) {
-                llc_update_replacement_state(fill_cpu, set, way, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].ip, 0, MSHR.entry[mshr_index].type, 0);
-
-            }
-            else
-                update_replacement_state(fill_cpu, set, way, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].ip, 0, MSHR.entry[mshr_index].type, 0);
-
-            // COLLECT STATS
-            sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
-            sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
-
-            // check fill level
-            if (MSHR.entry[mshr_index].fill_level < fill_level) {
-
-                if (MSHR.entry[mshr_index].instruction) 
-                    upper_level_icache[fill_cpu]->return_data(&MSHR.entry[mshr_index]);
-                else // data
-                    upper_level_dcache[fill_cpu]->return_data(&MSHR.entry[mshr_index]);
-            }
-
-	    if(warmup_complete[fill_cpu])
-	      {
-		uint64_t current_miss_latency = (current_core_cycle[fill_cpu] - MSHR.entry[mshr_index].cycle_enqueued);	
-		total_miss_latency += current_miss_latency;
-	      }
-
-            MSHR.remove_queue(&MSHR.entry[mshr_index]);
-            MSHR.num_returned--;
-
-            update_fill_cycle();
-
-            return; // return here, no need to process further in this function
-        }
-#endif
 
         uint8_t  do_fill = 1;
 
@@ -143,11 +99,6 @@ void CACHE::handle_fill()
                     do_fill = 0;
                     lower_level->increment_WQ_FULL(block[set][way].address);
                     STALL[MSHR.entry[mshr_index].type]++;
-
-                    DP ( if (warmup_complete[fill_cpu]) {
-                    cout << "[" << NAME << "] " << __func__ << "do_fill: " << +do_fill;
-                    cout << " lower level wq is full!" << " fill_addr: " << hex << MSHR.entry[mshr_index].address;
-                    cout << " victim_addr: " << block[set][way].tag << dec << endl; });
                 }
                 else {
                     PACKET writeback_packet;
@@ -165,13 +116,6 @@ void CACHE::handle_fill()
                     lower_level->add_wq(&writeback_packet);
                 }
             }
-#ifdef SANITY_CHECK
-            else {
-                // sanity check
-                if (cache_type != IS_STLB)
-                    assert(0);
-            }
-#endif
         }
 
         if (do_fill){
@@ -199,19 +143,6 @@ void CACHE::handle_fill()
 
             // COLLECT STATS
             sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
-            // bool found_different_cpu = false;
-            // if (cache_type == IS_LLC) {
-            //     for(int i = 0; i < llc_vector.size(); i++){
-            //         if (llc_vector[i].cpu != fill_cpu && llc_vector[i].address == MSHR.entry[MSHR.next_fill_index].address) {
-            //             whole_llc_mshr_hit_diff_cpu_id++;
-            //             found_different_cpu = true;
-            //             break;
-            //         }
-            //     }
-            //     if(found_different_cpu == false){
-            //         llc_vector.push_back(MSHR.entry[MSHR.next_fill_index]);
-            //     }
-            // }
             sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
 
             fill_cache(set, way, &MSHR.entry[mshr_index]);
@@ -264,6 +195,7 @@ void CACHE::handle_fill()
                     llc_mshr_max_full = MSHR.occupancy;
                 }
             }
+            static_partition_table[MSHR.entry[mshr_index].cpu]--;
             MSHR.remove_queue(&MSHR.entry[mshr_index]);
             MSHR.num_returned--;
 
@@ -303,19 +235,6 @@ void CACHE::handle_writeback()
                     llc_mshr_hit_diff_cpu_id++;
                 }
             }
-            // bool found_different_cpu = false;
-            // if (cache_type == IS_LLC) {
-            //     for(int i = 0; i < llc_vector.size(); i++){
-            //         if ((llc_vector[i].cpu != writeback_cpu) && (llc_vector[i].address == WQ.entry[WQ.head].address)) {
-            //             whole_llc_mshr_hit_diff_cpu_id++;
-            //             found_different_cpu = true;
-            //             break;
-            //         }
-            //     }
-            //     if(found_different_cpu == false){
-            //         llc_vector.push_back(WQ.entry[WQ.head]);
-            //     }
-            // }
             sim_hit[writeback_cpu][WQ.entry[index].type]++;
             sim_access[writeback_cpu][WQ.entry[index].type]++;
 
@@ -345,12 +264,6 @@ void CACHE::handle_writeback()
             WQ.remove_queue(&WQ.entry[index]);
         }
         else { // writeback miss (or RFO miss for L1D)
-            
-            DP ( if (warmup_complete[writeback_cpu]) {
-            cout << "[" << NAME << "] " << __func__ << " type: " << +WQ.entry[index].type << " miss";
-            cout << " instr_id: " << WQ.entry[index].instr_id << " address: " << hex << WQ.entry[index].address;
-            cout << " full_addr: " << WQ.entry[index].full_addr << dec;
-            cout << " cycle: " << WQ.entry[index].event_cycle << endl; });
 
             if (cache_type == IS_L1D) { // RFO miss
 
@@ -360,32 +273,17 @@ void CACHE::handle_writeback()
 
                 if ((mshr_index == -1) && (MSHR.occupancy < MSHR_SIZE)) { // this is a new miss
 
-		  if(cache_type == IS_LLC)
-		    {
-		      // check to make sure the DRAM RQ has room for this LLC RFO miss
-		      if (lower_level->get_occupancy(1, WQ.entry[index].address) == lower_level->get_size(1, WQ.entry[index].address))
-			{
-			  miss_handled = 0;
-			}
-		      else
-			{
-			  add_mshr(&WQ.entry[index]);
-			  lower_level->add_rq(&WQ.entry[index]);
-			}
-		    }
-		  else
-		    {
-		      // add it to mshr (RFO miss)
-		      add_mshr(&WQ.entry[index]);
-		      
-		      // add it to the next level's read queue
-		      //if (lower_level) // L1D always has a lower level cache
-		      lower_level->add_rq(&WQ.entry[index]);
-		    }
+		 
                 }
                 else {
                     if ((mshr_index == -1) && (MSHR.occupancy == MSHR_SIZE)) { // not enough MSHR resource
-                        
+                            if(cache_type == IS_LLC)
+                            {
+                                if(MSHR_SIZE == MSHR.occupancy)
+                                {
+                                    llc_mshr_full_stall = llc_mshr_full_stall + 1;
+                                }
+                            }
                         // cannot handle miss request until one of MSHRs is available
                         miss_handled = 0;
                         STALL[WQ.entry[index].type]++;
@@ -516,19 +414,6 @@ void CACHE::handle_writeback()
 
                     // COLLECT STATS
                     sim_miss[writeback_cpu][WQ.entry[index].type]++;
-                    // bool found_different_cpu = false;
-                    // if (cache_type == IS_LLC) {
-                    //     for(int i = 0; i < llc_vector.size(); i++){
-                    //         if (llc_vector[i].cpu != writeback_cpu && llc_vector[i].address == WQ.entry[WQ.head].address) {
-                    //             whole_llc_mshr_hit_diff_cpu_id++;
-                    //             found_different_cpu = true;
-                    //             break;
-                    //         }
-                    //     }
-                    //     if(found_different_cpu == false){
-                    //         llc_vector.push_back(WQ.entry[WQ.head]);
-                    //     }
-                    // }
                     sim_access[writeback_cpu][WQ.entry[index].type]++;
 
                     fill_cache(set, way, &WQ.entry[index]);
@@ -629,19 +514,7 @@ void CACHE::handle_read()
                         llc_mshr_hit_diff_cpu_id++;
                     }
                 }
-                // bool found_different_cpu = false;
-                // if (cache_type == IS_LLC) {
-                //     for(int i = 0; i < llc_vector.size(); i++){
-                //         if (llc_vector[i].cpu != read_cpu && llc_vector[i].address ==RQ.entry[RQ.head].address) {
-                //             whole_llc_mshr_hit_diff_cpu_id++;
-                //             found_different_cpu = true;
-                //             break;
-                //         }
-                //     }
-                //     if(found_different_cpu == false){
-                //         llc_vector.push_back(RQ.entry[RQ.head]);
-                //     }
-                // }
+
                 sim_hit[read_cpu][RQ.entry[index].type]++;
                 sim_access[read_cpu][RQ.entry[index].type]++;
 
@@ -722,7 +595,13 @@ void CACHE::handle_read()
                 }
                 else {
                     if ((mshr_index == -1) && (MSHR.occupancy == MSHR_SIZE)) { // not enough MSHR resource
-                        
+                        if(cache_type == IS_LLC)
+                        {
+                            if(MSHR_SIZE == MSHR.occupancy)
+                            {
+                                llc_mshr_full_stall = llc_mshr_full_stall + 1;
+                            }
+                        }
                         // cannot handle miss request until one of MSHRs is available
                         miss_handled = 0;
                         STALL[RQ.entry[index].type]++;
@@ -885,19 +764,6 @@ void CACHE::handle_prefetch()
                         llc_mshr_hit_diff_cpu_id++;
                     }
                 }
-                // bool found_different_cpu = false;
-                // if (cache_type == IS_LLC) {
-                //     for(int i = 0; i < llc_vector.size(); i++){
-                //         if (llc_vector[i].cpu != prefetch_cpu && llc_vector[i].address == PQ.entry[PQ.head].address) {
-                //             whole_llc_mshr_hit_diff_cpu_id++;
-                //             found_different_cpu = true;
-                //             break;
-                //         }
-                //     }
-                //     if(found_different_cpu == false){
-                //         llc_vector.push_back(PQ.entry[PQ.head]);
-                //     }
-                // }
                 sim_hit[prefetch_cpu][PQ.entry[index].type]++;
                 sim_access[prefetch_cpu][PQ.entry[index].type]++;
 
@@ -945,11 +811,6 @@ void CACHE::handle_prefetch()
                 int mshr_index = check_mshr(&PQ.entry[index], cache_type);
 
                 if ((mshr_index == -1) && (MSHR.occupancy < MSHR_SIZE)) { // this is a new miss
-
-                    DP ( if (warmup_complete[PQ.entry[index].cpu]) {
-                    cout << "[" << NAME << "_PQ] " <<  __func__ << " want to add instr_id: " << PQ.entry[index].instr_id << " address: " << hex << PQ.entry[index].address;
-                    cout << " full_addr: " << PQ.entry[index].full_addr << dec;
-                    cout << " occupancy: " << lower_level->get_occupancy(3, PQ.entry[index].address) << " SIZE: " << lower_level->get_size(3, PQ.entry[index].address) << endl; });
 
                     // first check if the lower level PQ is full or not
                     // this is possible since multiple prefetchers can exist at each level of caches
@@ -1002,7 +863,13 @@ void CACHE::handle_prefetch()
                 }
                 else {
                     if ((mshr_index == -1) && (MSHR.occupancy == MSHR_SIZE)) { // not enough MSHR resource
-
+                        if(cache_type == IS_LLC)
+                        {
+                            if(MSHR_SIZE == MSHR.occupancy)
+                            {
+                                llc_mshr_full_stall = llc_mshr_full_stall + 1;
+                            }
+                        }
                         // TODO: should we allow prefetching with lower fill level at this case?
                         
                         // cannot handle miss request until one of MSHRs is available
@@ -1183,12 +1050,6 @@ int CACHE::invalidate_entry(uint64_t inval_addr)
             block[set][way].valid = 0;
 
             match_way = way;
-
-            DP ( if (warmup_complete[cpu]) {
-            cout << "[" << NAME << "] " << __func__ << " inval_addr: " << hex << inval_addr;  
-            cout << " tag: " << block[set][way].tag << " data: " << block[set][way].data << dec;
-            cout << " set: " << set << " way: " << way << " lru: " << block[set][way].lru << " cycle: " << current_core_cycle[cpu] << endl; });
-
             break;
         }
     }
@@ -1212,23 +1073,10 @@ int CACHE::add_rq(PACKET *packet)
                 upper_level_dcache[packet->cpu]->return_data(packet);
         }
 
-#ifdef SANITY_CHECK
-        if (cache_type == IS_ITLB)
-            assert(0);
-        else if (cache_type == IS_DTLB)
-            assert(0);
-        else if (cache_type == IS_L1I)
-            assert(0);
-#endif
         // update processed packets
         if ((cache_type == IS_L1D) && (packet->type != PREFETCH)) {
             if (PROCESSED.occupancy < PROCESSED.SIZE)
                 PROCESSED.add_queue(packet);
-
-            DP ( if (warmup_complete[packet->cpu]) {
-            cout << "[" << NAME << "_RQ] " << __func__ << " instr_id: " << packet->instr_id << " found recent writebacks";
-            cout << hex << " read: " << packet->address << " writeback: " << WQ.entry[wq_index].address << dec;
-            cout << " index: " << MAX_READ << " rob_signal: " << packet->rob_signal << endl; });
         }
 
         HIT[packet->type]++;
@@ -1248,10 +1096,6 @@ int CACHE::add_rq(PACKET *packet)
             uint32_t rob_index = packet->rob_index;
             RQ.entry[index].rob_index_depend_on_me.insert (rob_index);
             RQ.entry[index].instr_merged = 1;
-
-            DP (if (warmup_complete[packet->cpu]) {
-            cout << "[INSTR_MERGED] " << __func__ << " cpu: " << packet->cpu << " instr_id: " << RQ.entry[index].instr_id;
-            cout << " merged rob_index: " << rob_index << " instr_id: " << packet->instr_id << endl; });
         }
         else 
         {
@@ -1267,9 +1111,6 @@ int CACHE::add_rq(PACKET *packet)
                 RQ.entry[index].lq_index_depend_on_me.insert (lq_index);
                 RQ.entry[index].load_merged = 1;
 
-                DP (if (warmup_complete[packet->cpu]) {
-                cout << "[DATA_MERGED] " << __func__ << " cpu: " << packet->cpu << " instr_id: " << RQ.entry[index].instr_id;
-                cout << " merged rob_index: " << packet->rob_index << " instr_id: " << packet->instr_id << " lq_index: " << packet->lq_index << endl; });
             }
         }
 
@@ -1289,15 +1130,6 @@ int CACHE::add_rq(PACKET *packet)
     // if there is no duplicate, add it to RQ
     index = RQ.tail;
 
-#ifdef SANITY_CHECK
-    if (RQ.entry[index].address != 0) {
-        cerr << "[" << NAME << "_ERROR] " << __func__ << " is not empty index: " << index;
-        cerr << " address: " << hex << RQ.entry[index].address;
-        cerr << " full_addr: " << RQ.entry[index].full_addr << dec << endl;
-        assert(0);
-    }
-#endif
-
     RQ.entry[index] = *packet;
 
     // ADD LATENCY
@@ -1311,12 +1143,7 @@ int CACHE::add_rq(PACKET *packet)
     if (RQ.tail >= RQ.SIZE)
         RQ.tail = 0;
 
-    DP ( if (warmup_complete[RQ.entry[index].cpu]) {
-    cout << "[" << NAME << "_RQ] " <<  __func__ << " instr_id: " << RQ.entry[index].instr_id << " address: " << hex << RQ.entry[index].address;
-    cout << " full_addr: " << RQ.entry[index].full_addr << dec;
-    cout << " type: " << +RQ.entry[index].type << " head: " << RQ.head << " tail: " << RQ.tail << " occupancy: " << RQ.occupancy;
-    cout << " event: " << RQ.entry[index].event_cycle << " current: " << current_core_cycle[RQ.entry[index].cpu] << endl; });
-
+   
     if (packet->address == 0)
         assert(0);
 
@@ -1591,14 +1418,6 @@ void CACHE::update_fill_cycle()
     
     MSHR.next_fill_cycle = min_cycle;
     MSHR.next_fill_index = min_index;
-    if (min_index < MSHR.SIZE) {
-
-        DP (if (warmup_complete[MSHR.entry[min_index].cpu]) {
-        cout << "[" << NAME << "_MSHR] " <<  __func__ << " instr_id: " << MSHR.entry[min_index].instr_id;
-        cout << " address: " << hex << MSHR.entry[min_index].address << " full_addr: " << MSHR.entry[min_index].full_addr;
-        cout << " data: " << MSHR.entry[min_index].data << dec << " num_returned: " << MSHR.num_returned;
-        cout << " event: " << MSHR.entry[min_index].event_cycle << " current: " << current_core_cycle[MSHR.entry[min_index].cpu] << " next: " << MSHR.next_fill_cycle << endl; });
-    }
 }
 
 int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
@@ -1606,13 +1425,6 @@ int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
     // search mshr
     // printf("packet->cpu%u\n",packet->cpu);
     // printf("packet->address%u\n",packet->address);
-    if(cache_type == IS_LLC)
-    {
-        if(MSHR_SIZE == MSHR.occupancy)
-        {
-            llc_mshr_full_stall = llc_mshr_full_stall + 1;
-        }
-    }
     for (uint32_t index=0; index<MSHR_SIZE; index++) {
         if (MSHR.entry[index].address == packet->address) {
             if(cache_type == IS_LLC)
@@ -1629,18 +1441,6 @@ int CACHE::check_mshr(PACKET *packet, uint8_t cache_type)
             return index;
         }
     }
-
-    DP ( if (warmup_complete[packet->cpu]) {
-    cout << "[" << NAME << "_MSHR] " << __func__ << " new address: " << hex << packet->address;
-    cout << " full_addr: " << packet->full_addr << dec << endl; });
-
-    DP ( if (warmup_complete[packet->cpu] && (MSHR.occupancy == MSHR_SIZE)) { 
-    cout << "[" << NAME << "_MSHR] " << __func__ << " mshr is full";
-    cout << " instr_id: " << packet->instr_id << " mshr occupancy: " << MSHR.occupancy;
-    cout << " address: " << hex << packet->address;
-    cout << " full_addr: " << packet->full_addr << dec;
-    cout << " cycle: " << current_core_cycle[packet->cpu] << endl; });
-
     return -1;
 }
 
@@ -1658,14 +1458,18 @@ void CACHE::add_mshr(PACKET *packet)
             MSHR.entry[index].returned = INFLIGHT;
             MSHR.occupancy++;
 
-            DP ( if (warmup_complete[packet->cpu]) {
-            cout << "[" << NAME << "_MSHR] " << __func__ << " instr_id: " << packet->instr_id;
-            cout << " address: " << hex << packet->address << " full_addr: " << packet->full_addr << dec;
-            cout << " index: " << index << " occupancy: " << MSHR.occupancy << endl; });
-
             break;
         }
     }
+    if(static_partition_table[packet->cpu] >= (LLC_MSHR_SIZE/NUM_CPUS)){
+        whole_llc_mshr_hit_diff_cpu_id++;
+        if(MSHR.occupancy == MSHR_SIZE)
+        {
+            whole_llc_mshr_hit_diff_cpu_id--;
+        }
+        
+    }
+    static_partition_table[packet->cpu]++;
 }
 
 uint32_t CACHE::get_occupancy(uint8_t queue_type, uint64_t address)

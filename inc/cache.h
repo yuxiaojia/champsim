@@ -2,6 +2,7 @@
 #define CACHE_H
 
 #include "memory_class.h"
+#include <vector>
 
 // PAGE
 extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
@@ -75,7 +76,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_RQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
 #define LLC_WQ_SIZE NUM_CPUS*L2C_MSHR_SIZE //48
 #define LLC_PQ_SIZE NUM_CPUS*32
-#define LLC_MSHR_SIZE NUM_CPUS*16
+#define LLC_MSHR_SIZE NUM_CPUS*3
 #define LLC_LATENCY 20  // 5 (L1I or L1D) + 10 + 20 = 34 cycles
 
 void print_cache_config();
@@ -122,6 +123,7 @@ class CACHE : public MEMORY {
     uint64_t llc_mshr_full_stall;
     uint64_t llc_mshr_hit_diff_cpu_id;
     uint64_t whole_llc_mshr_hit_diff_cpu_id;
+    std::vector<int> static_partition_table;
 
     
     // constructor
@@ -178,6 +180,7 @@ class CACHE : public MEMORY {
         llc_mshr_full_stall = 0;
         llc_mshr_hit_diff_cpu_id = 0;
         whole_llc_mshr_hit_diff_cpu_id = 0;
+        static_partition_table.resize(NUM_CPUS, 0);
     };
 
     // destructor
